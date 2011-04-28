@@ -7,7 +7,7 @@ char token[MAX_TOKEN_SIZE+1];
 
 #define ASIZE(a_) sizeof(a_)/sizeof(a_[0])
 
-enum {
+enum TokenType {
    IS_ERROR,
    IS_ID,
    IS_RESERVED,
@@ -25,8 +25,9 @@ char *twoOperat[] = {
 };
 
 char *keywords[] = {
-   "for",
-   "if",
+   "for", "if", "while",
+   "int", "char", "void", "long", "static",
+   "return",
 };
 
 static int operatorId = 0;
@@ -80,20 +81,27 @@ int nexttoken(FILE *f)
    int ret = 0;
    int isid = 0;
    int blanktype;
+
+   /* write blanks */
    while ((c = fgetc(f)) != EOF && (blanktype = isblank(c))) {
       if (blanktype == 2) printf("\\\\\n\\rule{0cm}{0cm}");
       else printf("~");
    }
+
+   /* read a token */
    while (c != EOF &&  !isblank(c) && pos < MAX_TOKEN_SIZE) {
+
+      /* is an id? then only [_A-Za-z] allowed */
       if (pos == 0 && isidchar(c, pos)) {
          isid = 1;
       } else if (isid && pos > 0 && !isidchar(c, pos)) {
-         /* cannot be part of a token */
          ungetc(c, f);
-/*       printf("I am ungetting %c for pos %d\n", c, pos); */
          break;
       }
+
       token[pos++] = c;
+
+      /* is that an operator? return the appropriate code */
       if (pos == 2) {
          if (isTwoOperator()) {
             ret = IS_OPERATOR;
@@ -106,9 +114,15 @@ int nexttoken(FILE *f)
             break;
          }
       }
-      if (c == '\\' || c == '_' || (c == '#' && pos>1) ||  c == '&') {
+
+      /* convert into valid TeX characters */
+      if (c == '_' || (c == '#' && pos>1) ||  c == '&') {
          token[pos-1] = '\\';
          token[pos++] = c;
+      }
+      if (c == '\\') {
+         strcpy(token + pos -1, "\\textbackslash{}");
+         pos += sizeof("\\textbackslash{}") - 2;
       }
       c = fgetc(f);
    }

@@ -1,11 +1,13 @@
 /* read a file and print tokens on it */
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
-#define MAX_TOKEN_SIZE 1023
+#define MAX_TOKEN_SIZE 2047
 char token[MAX_TOKEN_SIZE+1];
 
 #define ASIZE(a_) sizeof(a_)/sizeof(a_[0])
+#define FATAL(s_) fatal(s_, __FILE__, __LINE__)
 
 enum TokenType {
    IS_ERROR,
@@ -31,14 +33,19 @@ char *keywords[] = {
 
 static int operatorId = 0;
 
-// return 1 for blank, 2 for newlines
+void fatal(const char *emsg, const char *file, int line)
+{
+   printf("%s at %s:%d\n", emsg, file, line);
+   exit(1);
+}
+
+/* return 1 for blank, 2 for newlines */
 int isblank(int c) 
 {
-   if (c == ' ' || c == '\t')
+   if (c == ' '  || c == '\t')
       return 1;
-   if (c == '\n' || c == '\r') {
+   if (c == '\n' || c == '\r')
       return 2;
-   }
    return 0;
 }
 
@@ -116,19 +123,24 @@ int nexttoken(FILE *f)
 
       /* convert into valid TeX characters */
       if (c=='$' || c=='{' || c=='}' || c=='%' || c=='_' || (c=='#' && pos>1) || c=='&') {
+         if (pos + 2 > MAX_TOKEN_SIZE) FATAL("error: token is too long");
          token[pos-1] = '\\';
          token[pos++] = c;
       }
       if (c == '\\') {
-         strcpy(token + pos -1, "\\textbackslash{}");  /// Fix BUG
-         pos += sizeof("\\textbackslash{}") - 2;
+         int tlen = sizeof("\\textbackslash{}");
+         if (tlen + pos > MAX_TOKEN_SIZE) FATAL("error: token is too long");
+         strcpy(token + pos -1, "\\textbackslash{}");
+         pos += tlen - 2;
       }
       if (c == '\'' || c == '"') {
+         if (pos + 5 > MAX_TOKEN_SIZE) FATAL("error: token is too long");
          strcpy(token + pos -1, "{\\tt\"}");
          token[pos+3] = c;
          pos += sizeof("{\\tt\"}") - 2;
       }
       if (c == '<' || c == '>') {
+         if (pos + 3 > MAX_TOKEN_SIZE) FATAL("error: token is too long");
          token[pos-1] = '$';
          token[pos  ] = c;
          token[pos+1] = '$';

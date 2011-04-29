@@ -15,8 +15,7 @@ enum TokenType {
 };
 
 char *oneOperat[] = {
-   "{", "}", "#", "<", ">", "(", ")",
-   "=", ">", "<",
+   "{", "}", "#", "<", ">", "(", ")", "=", 
    "+", "-", "*", "/",
 };
 
@@ -27,7 +26,7 @@ char *twoOperat[] = {
 char *keywords[] = {
    "for", "if", "while",
    "int", "char", "void", "long", "static",
-   "return",
+   "return", "case", "default",
 };
 
 static int operatorId = 0;
@@ -116,13 +115,24 @@ int nexttoken(FILE *f)
       }
 
       /* convert into valid TeX characters */
-      if (c == '_' || (c == '#' && pos>1) ||  c == '&') {
+      if (c=='$' || c=='{' || c=='}' || c=='%' || c=='_' || (c=='#' && pos>1) || c=='&') {
          token[pos-1] = '\\';
          token[pos++] = c;
       }
       if (c == '\\') {
-         strcpy(token + pos -1, "\\textbackslash{}");
+         strcpy(token + pos -1, "\\textbackslash{}");  /// Fix BUG
          pos += sizeof("\\textbackslash{}") - 2;
+      }
+      if (c == '\'' || c == '"') {
+         strcpy(token + pos -1, "{\\tt\"}");
+         token[pos+3] = c;
+         pos += sizeof("{\\tt\"}") - 2;
+      }
+      if (c == '<' || c == '>') {
+         token[pos-1] = '$';
+         token[pos  ] = c;
+         token[pos+1] = '$';
+         pos += 2;
       }
       c = fgetc(f);
    }

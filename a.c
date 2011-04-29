@@ -27,7 +27,7 @@ char *operators[] = {
 
 char *keywords[] = {
    "for", "if", "while",
-   "int", "char", "void", "long", "static",
+   "int", "char", "void", "long", "static", "const",
    "return", "case", "default",
 };
 

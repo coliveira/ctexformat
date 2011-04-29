@@ -16,13 +16,10 @@ enum TokenType {
    IS_OPERATOR,
 };
 
-char *oneOperat[] = {
-   "{", "}", "#", "<", ">", "(", ")", "=", 
-   "+", "-", "*", "/",
-};
-
-char *twoOperat[] = {
-   "/*", "*/", "&&", "||", "==",
+char *operators[] = {
+   "{", "}", "#", "<", ">", "(", ")", "=", // 0 .. 7
+   "+", "-", "*", "/", // 8..11
+   "/*", "*/", "&&", "||", "==", // 12..16
 };
 
 char *keywords[] = {
@@ -49,31 +46,19 @@ int isblank(int c)
    return 0;
 }
 
-int isOneOperator()
+int isoperator()
 {
    int i;
-   for (i=0; i<ASIZE(oneOperat); ++i) {
-      if (token[0] == oneOperat[i][0]) {
+   for (i=0; i<ASIZE(operators); ++i) {
+      if (operators[i][0] == token[0] &&
+          (operators[i][1]=='\0' || operators[i][1] == token[1])) {
          operatorId = i;
          return 1;
       }
    }
    return 0;
 }
-
-int isTwoOperator()
-{
-   int i;
-   for (i=0; i<ASIZE(twoOperat); ++i) {
-      if (token[0] == twoOperat[i][0] &&
-          token[1] == twoOperat[i][1]) {
-         operatorId = ASIZE(oneOperat) + i;
-         return 1;
-      }
-   }
-   return 0;
-}
-
+      
 int isidchar(char c, int afterfirst)
 {
    int normalchar = ('a' <= c && c <= 'z') || ('A'<=c && c<='Z') || c=='_';
@@ -108,17 +93,9 @@ int nexttoken(FILE *f)
       token[pos++] = c;
 
       /* is that an operator? return the appropriate code */
-      if (pos == 2) {
-         if (isTwoOperator()) {
-            ret = IS_OPERATOR;
-            break;
-         }
-         else if (isOneOperator()) {
-            ungetc(c, f);
-            ret = IS_OPERATOR;
-            pos--;
-            break;
-         }
+      if (pos == 2 && isoperator()) {
+         ret = IS_OPERATOR;
+         break;
       }
 
       /* convert into valid TeX characters */
@@ -148,11 +125,12 @@ int nexttoken(FILE *f)
       }
       c = fgetc(f);
    }
-   if (isblank(c)) ungetc(c, f); // lets deal with this the next time
+   if (isblank(c)) ungetc(c, f); /* lets deal with this the next time */
    token[pos] = '\0';
-   if (pos == 1 && isOneOperator()) return IS_OPERATOR;
+   if (pos == 1 && isoperator()) return IS_OPERATOR; /* maybe returned before testing...*/
    if (ret) return ret;
 
+   /* check for reserved keywords */
    for (i=0; i<sizeof(keywords)/sizeof(keywords[0]); ++i) {
       if (!strcmp(keywords[i], token)) {
          return IS_RESERVED;
@@ -186,8 +164,8 @@ int main(int argc, char **argv) {
             case 2: strcpy(op, "{\\tt \\#}"); break;
             case 3: strcpy(op, "$<$"); break;
             case 4: strcpy(op, "$>$"); break;
-            case ASIZE(oneOperat): printf("{\\tt "); strcpy(op, "/*"); break;
-            case ASIZE(oneOperat) + 1: printf("}"); strcpy(op, "*/"); break;
+            case 12: printf("{\\tt "); strcpy(op, "/*"); break;
+            case 13: printf("}"); strcpy(op, "*/"); break;
             default: strcpy(op, token);
          }
          printf("{\\tt %s}", op);

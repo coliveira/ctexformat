@@ -16,6 +16,9 @@ enum TokenType {
    IS_OPERATOR,
 };
 
+/* change this if adding single character operators */
+#define MAX_ONECHAR_OPERATOR_POS 11  
+
 char *operators[] = {
    "{", "}", "#", "<", ">", "(", ")", "=", // 0 .. 7
    "+", "-", "*", "/", // 8..11
@@ -49,7 +52,7 @@ int isblank(int c)
 int isoperator()
 {
    int i;
-   for (i=0; i<ASIZE(operators); ++i) {
+   for (i=ASIZE(operators)-1; i;  --i) {
       if (operators[i][0] == token[0] &&
           (operators[i][1]=='\0' || operators[i][1] == token[1])) {
          operatorId = i;
@@ -95,6 +98,10 @@ int nexttoken(FILE *f)
       /* is that an operator? return the appropriate code */
       if (pos == 2 && isoperator()) {
          ret = IS_OPERATOR;
+         if (operatorId < MAX_ONECHAR_OPERATOR_POS) {
+            ungetc(c, f);
+            pos--;
+         }
          break;
       }
 

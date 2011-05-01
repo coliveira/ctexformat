@@ -1,0 +1,13 @@
+Format C files for displaying as a Latex File.
+
+Currently, I am doing a very basic parsing to
+recognize special characters, operators, and
+comments.
+
+The usage is
+
+ctexformat <file> 
+
+The output is written to stdout. It should be 
+a file that can be run through latex without issues.
+

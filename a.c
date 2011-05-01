@@ -5,6 +5,7 @@
 
 #define MAX_TOKEN_SIZE 2047
 char token[MAX_TOKEN_SIZE+1];
+char tokencp[MAX_TOKEN_SIZE+1];
 
 #define ASIZE(a_) sizeof(a_)/sizeof(a_[0])
 #define FATAL(s_) fatal(s_, __FILE__, __LINE__)
@@ -26,7 +27,7 @@ char *operators[] = {
 };
 
 char *keywords[] = {
-   "for", "if", "while",
+   "for", "if", "else", "while",
    "int", "char", "void", "long", "static", "const",
    "return", "case", "default",
 };
@@ -52,7 +53,7 @@ int isblank(int c)
 int isoperator()
 {
    int i;
-   for (i=ASIZE(operators)-1; i;  --i) {
+   for (i=ASIZE(operators)-1; i>=0;  --i) {
       if (operators[i][0] == token[0] &&
           (operators[i][1]=='\0' || operators[i][1] == token[1])) {
          operatorId = i;
@@ -70,7 +71,7 @@ int isidchar(char c, int afterfirst)
 
 int nexttoken(FILE *f) 
 {
-   int c, i;
+   int c, i, n;
    int pos = 0;
    int ret = 0;
    int isid = 0;
@@ -104,7 +105,21 @@ int nexttoken(FILE *f)
          }
          break;
       }
+      c = fgetc(f);
+   }
+   if (isblank(c)) ungetc(c, f); /* lets deal with this the next time */
+   if (pos == 1) {
+      token[pos] = '\0';
+      if (isoperator()) return IS_OPERATOR; /* maybe returned before testing...*/
+   }
 
+   for (i=0; i<pos; ++i) tokencp[i] = token[i]; // make a copy of what we have
+
+   n = pos;
+   pos = 0;
+   for (i=0; i<n; ++i) {
+      c = tokencp[i];
+      token[pos++] = c;
       /* convert into valid TeX characters */
       if (c=='$' || c=='{' || c=='}' || c=='%' || c=='_' || (c=='#' && pos>1) || c=='&') {
          if (pos + 2 > MAX_TOKEN_SIZE) FATAL("error: token is too long");
@@ -130,11 +145,8 @@ int nexttoken(FILE *f)
          token[pos+1] = '$';
          pos += 2;
       }
-      c = fgetc(f);
    }
-   if (isblank(c)) ungetc(c, f); /* lets deal with this the next time */
    token[pos] = '\0';
-   if (pos == 1 && isoperator()) return IS_OPERATOR; /* maybe returned before testing...*/
    if (ret) return ret;
 
    /* check for reserved keywords */

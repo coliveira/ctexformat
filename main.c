@@ -104,6 +104,12 @@ void texformat(int maxpos)
          token[pos+3] = c;
          pos += sizeof("{\\tt\"}") - 2;
       }
+      if (c == '~') {
+         int tlen = sizeof("{\\tt\\~{}}");
+         if (pos + tlen > MAX_TOKEN_SIZE) FATAL("error: token is too long");
+         strcpy(token + pos -1, "{\\tt\\~{}}");
+         pos += tlen - 2;
+      }
       if (c == '<' || c == '>') {
          if (pos + 3 > MAX_TOKEN_SIZE) FATAL("error: token is too long");
          token[pos-1] = '$';
@@ -205,27 +211,28 @@ int nexttoken(FILE *f)
       else printf("~");
    }
 
-   /* read a token */
+   if (c == '"') {
+      return readstringlit(f);
+   } 
+   if (c == '\'') {
+      return readcharlit(f);
+   }
+   if (('0' <= c && c <= '9') || c == '.') {
+      ungetc(c, f);
+      return readnumber(f);
+   }
+   if (isidchar(c, pos)) {
+      isid = 1;
+   }
+
+   /* read a general token */
    while (c != EOF &&  !isblank(c) && pos < MAX_TOKEN_SIZE) {
 
       /* is an id? then only [_A-Za-z] allowed */
-      if (pos == 0 && isidchar(c, pos)) {
-         isid = 1;
-      } else if (isid && pos > 0 && !isidchar(c, pos)) {
+      if (isid && pos > 0 && !isidchar(c, pos)) {
          ungetc(c, f);
          break;
       } 
-
-      if (pos == 0 && c == '"') {
-         return readstringlit(f);
-      } 
-      if (pos == 0 && c == '\'') {
-         return readcharlit(f);
-      }
-      if (pos == 0 && (('0' <= c && c <= '9') || c == '.')) {
-         ungetc(c, f);
-         return readnumber(f);
-      }
 
       token[pos++] = c;
 

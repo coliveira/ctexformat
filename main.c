@@ -32,6 +32,7 @@ char *keywords[] = {
    "for", "if", "else", "while",
    "int", "char", "void", "long", "static", "const",
    "return", "case", "default",
+   0,
 };
 
 static int operatorId = 0;
@@ -162,11 +163,11 @@ int readstringlit(FILE *f)
 
 int nexttoken(FILE *f) 
 {
-   int c, i;
    int pos = 0;
    int ret = 0;
    int isid = 0;
-   int blanktype;
+   int c, blanktype;
+   char **kws;
 
    /* write blanks */
    while ((c = fgetc(f)) != EOF && (blanktype = isblank(c))) {
@@ -216,8 +217,8 @@ int nexttoken(FILE *f)
    if (ret) return ret;
 
    /* check for reserved keywords */
-   for (i=0; i<sizeof(keywords)/sizeof(keywords[0]); ++i) {
-      if (!strcmp(keywords[i], token)) {
+   for (kws = keywords; *kws; ++kws) {
+      if (!strcmp(*kws, token)) {
          return IS_RESERVED;
       }
    }

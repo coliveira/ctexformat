@@ -16,6 +16,7 @@ enum TokenType {
    IS_RESERVED,
    IS_OPERATOR,
    IS_STRING,
+   IS_CHAR,
 };
 
 /* change this if adding single character operators */
@@ -112,6 +113,28 @@ void texformat(int maxpos)
    token[pos] = '\0';
 }
 
+int readcharlit(FILE *f)
+{
+   int c = fgetc(f);
+   if (c == '\\') {
+      c = fgetc(f);
+      if (c!='\\' && c!='r' && c!='n' && c!='0' && c!='\'' && c!='t' && c!='a' && c!='b') {
+         printf("char is %c\n", c);
+         FATAL("error: invalid character literal");
+      }
+      token[0] = '\\';
+      token[1] = c;
+      texformat(2);
+   } else {
+      token[0] = c;
+      texformat(1);
+   }
+   c = fgetc(f);
+   if (c != '\'')
+      FATAL("error: invalid character literal");
+   return IS_CHAR;
+}
+
 int readstringlit(FILE *f)
 {
    int pos = 0;
@@ -165,6 +188,9 @@ int nexttoken(FILE *f)
       if (pos == 0 && c == '"') {
          return readstringlit(f);
       } 
+      if (pos == 0 && c == '\'') {
+         return readcharlit(f);
+      }
 
       token[pos++] = c;
 
@@ -233,7 +259,9 @@ int main(int argc, char **argv) {
       } else if (ret == IS_RESERVED) {
          printf("{\\bf %s}", token);
       } else if (ret == IS_STRING) {
-         printf("``%s''", token);
+         printf("{\\tt\"}%s{\\tt\"}", token);
+      } else if (ret == IS_CHAR) {
+         printf("{\\tt'%s'}", token);
       } else {
          printf("%s", token);
       } 

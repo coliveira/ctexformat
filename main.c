@@ -17,15 +17,17 @@ enum TokenType {
    IS_OPERATOR,
    IS_STRING,
    IS_CHAR,
+   IS_INT,
+   IS_FLOAT,
 };
 
 /* change this if adding single character operators */
-#define MAX_ONECHAR_OPERATOR_POS 11  
+#define MAX_ONECHAR_OPERATOR_POS 16
 
 char *operators[] = {
    "{", "}", "#", "<", ">", "(", ")", "=", // 0 .. 7
-   "+", "-", "*", "/", // 8..11
-   "/*", "*/", "&&", "||", "==", // 12..16
+   "+", "-", "*", "/", ",", ";", ":", "[", "]",  // 8..16
+   "/*", "*/", "&&", "||", "==", // 17..21
 };
 
 char *keywords[] = {
@@ -161,6 +163,34 @@ int readstringlit(FILE *f)
    return IS_STRING;
 }
 
+int readnumber(FILE *f)
+{
+   int pos = 0;
+   int c = fgetc(f);
+   int type = IS_INT;
+   while ('0' <= c && c <= '9') {
+      token[pos++] = c;
+      c = fgetc(f);
+   }
+
+   if (c == '.') {  // this is a float
+      token[pos++] = c;
+      c = fgetc(f);
+      while ('0' <= c && c <= '9') {
+         token[pos++] = c;
+         c = fgetc(f);
+      }
+      type = IS_FLOAT;
+   } 
+   
+   if (pos == 0)  // there is no number here
+      FATAL("error reading number");
+
+   token[pos] = '\0';
+   ungetc(c, f);
+   return type;
+}
+
 int nexttoken(FILE *f) 
 {
    int pos = 0;
@@ -191,6 +221,10 @@ int nexttoken(FILE *f)
       } 
       if (pos == 0 && c == '\'') {
          return readcharlit(f);
+      }
+      if (pos == 0 && (('0' <= c && c <= '9') || c == '.')) {
+         ungetc(c, f);
+         return readnumber(f);
       }
 
       token[pos++] = c;
@@ -252,8 +286,8 @@ int main(int argc, char **argv) {
             case 2: strcpy(op, "{\\tt \\#}"); break;
             case 3: strcpy(op, "$<$"); break;
             case 4: strcpy(op, "$>$"); break;
-            case 12: printf("{\\tt "); strcpy(op, "/*"); break;
-            case 13: printf("}"); strcpy(op, "*/"); break;
+            case MAX_ONECHAR_OPERATOR_POS + 1: printf("{\\tt "); strcpy(op, "/*"); break;
+            case MAX_ONECHAR_OPERATOR_POS + 2: printf("}"); strcpy(op, "*/"); break;
             default: strcpy(op, token);
          }
          printf("{\\tt %s}", op);
@@ -263,8 +297,11 @@ int main(int argc, char **argv) {
          printf("{\\tt\"}%s{\\tt\"}", token);
       } else if (ret == IS_CHAR) {
          printf("{\\tt'%s'}", token);
+      } else if (ret == IS_INT || ret == IS_FLOAT) {
+         printf("{\\tt %s}", token);
       } else {
          printf("%s", token);
+         fprintf(stderr, "%s\n", token);
       } 
    }
    printf("\\end{document}\n");

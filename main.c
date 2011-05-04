@@ -211,6 +211,37 @@ int nexttoken(FILE *f)
       else printf("~");
    }
 
+   if (c == '/') {
+      c = fgetc(f);
+      if (c == '/') { // this is a line comment
+         printf("{\\tt//");
+         while ((c = fgetc(f)) != EOF && c != '\n') {
+            // just print the comment
+            token[0] = c; texformat(1); printf("%s", token);
+         }
+         printf("}");
+      } else if (c == '*') {
+         /* There is a problem with alignment of first commented
+          * line with the next. The reason is that before the comment,
+          * blank characters "~" have the width of normal text. In the
+          * comment, they have the width of \tt text. */
+         printf("{\\tt/*");
+         while ((c = fgetc(f)) != EOF) {
+            if (c == '*') {
+               c = fgetc(f);
+               if (c == '/') break;  /* end of comment */
+               else { ungetc(c, f); c = '*'; }
+            }
+            if ((blanktype = isblank(c)) == 2) printf("\\\\\n\\rule{0cm}{0cm}");
+            else if (blanktype) printf("~");
+            else { token[0] = c; texformat(1); printf("%s", token); }
+         }
+         printf("*/}"); c = fgetc(f);
+      } else {
+         ungetc(c, f); c = '/';
+      }
+   }
+
    if (c == '"') {
       return readstringlit(f);
    } 

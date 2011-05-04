@@ -22,12 +22,12 @@ enum TokenType {
 };
 
 /* change this if adding single character operators */
-#define MAX_ONECHAR_OPERATOR_POS 16
+#define MAX_ONECHAR_OPERATOR_POS 17
 
 char *operators[] = {
    "{", "}", "#", "<", ">", "(", ")", "=", // 0 .. 7
-   "+", "-", "*", "/", ",", ";", ":", "[", "]",  // 8..16
-   "/*", "*/", "&&", "||", "==", // 17..21
+   "+", "-", "*", "/", ",", ";", ":", "[", "]", "!",  // 8..17
+   "/*", "*/", "&&", "||", "==", "!=", // 18..23
 };
 
 char *keywords[] = {
@@ -96,6 +96,12 @@ void texformat(int maxpos)
          int tlen = sizeof("\\textbackslash{}");
          if (tlen + pos > MAX_TOKEN_SIZE) FATAL("error: token is too long");
          strcpy(token + pos -1, "\\textbackslash{}");
+         pos += tlen - 2;
+      }
+      if (c == '|') {
+         int tlen = sizeof("{\\tt|}");
+         if (tlen + pos > MAX_TOKEN_SIZE) FATAL("error: token is too long");
+         strcpy(token + pos -1, "{\\tt|}");
          pos += tlen - 2;
       }
       if (c == '\'' || c == '"') {

@@ -45,8 +45,10 @@ char *keywords[] = {
 #define MAX_NUM_IDS 1024
 
 char identifiers[MAX_NUM_IDS][MAX_ID_SIZE+1];
+int firstviewed[MAX_NUM_IDS];
 
 int nids = 0;
+int curline = 0;
 
 int isidpresent(const char *id, int add)
 {
@@ -60,6 +62,7 @@ int isidpresent(const char *id, int add)
       FATAL("error: no space for new ids");
    if (strlen(id)> MAX_ID_SIZE)
       FATAL("errr: ID is too long");
+   firstviewed[nids] = curline;
    strcpy(identifiers[nids++], id);
    return 1;
 }
@@ -268,7 +271,7 @@ int processblanks(FILE *f)
 {
    int c, blanktype;
    while ((c = fgetc(f)) != EOF && (blanktype = isblank(c))) {
-      if (blanktype == 2) printf("\\\\\n\\rule{0cm}{0cm}");
+      if (blanktype == 2) { printf("\\\\\n\\rule{0cm}{0cm}"); curline++; }
       else printf("~");
    }
    return c;
@@ -402,7 +405,7 @@ int main(int argc, char **argv)
    for (i=0; i<nids; ++i) {
       strcpy(token, identifiers[i]);
       texformat(strlen(token));
-      printf("~%s\\\\\n", token);
+      printf("~%s, line %d\\\\\n", token, firstviewed[i]);
    }
    printf("\\end{document}\n");
    return 0;

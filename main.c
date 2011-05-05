@@ -10,6 +10,8 @@ char tokencp[MAX_TOKEN_SIZE+1];
 #define ASIZE(a_) sizeof(a_)/sizeof(a_[0])
 #define FATAL(s_) fatal(s_, __FILE__, __LINE__)
 
+void fatal(const char *emsg, const char *file, int line);
+
 enum TokenType {
    IS_ERROR,
    IS_ID,
@@ -19,6 +21,7 @@ enum TokenType {
    IS_CHAR,
    IS_INT,
    IS_FLOAT,
+   IS_NOTHING, // when EOF found
 };
 
 /* change this if adding single character operators */
@@ -33,9 +36,33 @@ char *operators[] = {
 char *keywords[] = {
    "for", "if", "else", "while",
    "int", "char", "void", "long", "static", "const",
-   "return", "case", "default",
+   "return", "case", "default", "switch", "break",
+   "struct", "enum", "sizeof",
    0,
 };
+
+#define MAX_ID_SIZE 63
+#define MAX_NUM_IDS 1024
+
+char identifiers[MAX_NUM_IDS][MAX_ID_SIZE+1];
+
+int nids = 0;
+
+int isidpresent(const char *id, int add)
+{
+   int i;
+   for (i=0; i<nids; ++i) {
+      if (!strcmp(id, identifiers[i])) 
+         return 1;
+   }
+   if (!add) return 0;
+   if (nids >= MAX_NUM_IDS)
+      FATAL("error: no space for new ids");
+   if (strlen(id)> MAX_ID_SIZE)
+      FATAL("errr: ID is too long");
+   strcpy(identifiers[nids++], id);
+   return 1;
+}
 
 static int operatorId = 0;
 
@@ -124,7 +151,7 @@ void texformat(int maxpos)
          pos += 2;
       }
    }
-   if (pos >= MAX_TOKEN_SIZE) FATAL("error: token is too long");
+   if (pos >= MAX_TOKEN_SIZE)  FATAL("error: token is too long"); 
    token[pos] = '\0';
 }
 
@@ -237,22 +264,31 @@ int readcomment(FILE *f)
    return c;
 }
 
+int processblanks(FILE *f)
+{
+   int c, blanktype;
+   while ((c = fgetc(f)) != EOF && (blanktype = isblank(c))) {
+      if (blanktype == 2) printf("\\\\\n\\rule{0cm}{0cm}");
+      else printf("~");
+   }
+   return c;
+}
+
 int nexttoken(FILE *f) 
 {
    int pos = 0;
    int ret = 0;
    int isid = 0;
-   int c, blanktype;
+   int c;
    char **kws;
 
-   /* write blanks */
-   while ((c = fgetc(f)) != EOF && (blanktype = isblank(c))) {
-      if (blanktype == 2) printf("\\\\\n\\rule{0cm}{0cm}");
-      else printf("~");
-   }
+   c = processblanks(f);
+   if (c == EOF) return IS_NOTHING;
 
    if (c == '/') {
       c = readcomment(f);
+      ungetc(c, f);
+      c = processblanks(f);
    }
    if (c == '"') {
       return readstringlit(f);
@@ -282,7 +318,7 @@ int nexttoken(FILE *f)
       /* is that an operator? return the appropriate code */
       if (pos == 2 && isoperator()) {
          ret = IS_OPERATOR;
-         if (operatorId < MAX_ONECHAR_OPERATOR_POS) {
+         if (operatorId <= MAX_ONECHAR_OPERATOR_POS) {
             ungetc(c, f);
             pos--;
          }
@@ -290,15 +326,19 @@ int nexttoken(FILE *f)
       }
       c = fgetc(f);
    }
-   if (isblank(c)) ungetc(c, f); /* lets deal with this the next time */
-   if (pos == 1) {
-      token[pos] = '\0';
-      if (isoperator()) return IS_OPERATOR; /* maybe returned before testing...*/
+   token[pos] = '\0';
+
+   if (isblank(c)) 
+      ungetc(c, f); /* lets deal with this the next time */
+
+   if (pos == 1 && isoperator()) 
+      return IS_OPERATOR; /* maybe returned before testing...*/
+
+
+   if (ret) {
+      texformat(pos);
+      return ret;
    }
-
-   texformat(pos);
-
-   if (ret) return ret;
 
    /* check for reserved keywords */
    for (kws = keywords; *kws; ++kws) {
@@ -308,10 +348,15 @@ int nexttoken(FILE *f)
    }
 
    /* else it is just a common identifier */
+   if (pos == 0) return IS_NOTHING;
+   isidpresent(token, 1);
+   texformat(pos);
    return IS_ID;
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char **argv) 
+{
+   int i;
    FILE *f;
    int ret, opid;
 
@@ -326,7 +371,7 @@ int main(int argc, char **argv) {
    }
 
    printf("\\documentclass{article}\\input{pre}\\begin{document}\n");
-   while (!feof(f) && (ret = nexttoken(f)) ) {
+   while (!feof(f) && (ret = nexttoken(f)) != IS_NOTHING ) {
       if (ret == IS_OPERATOR) {
          char op[16];
          opid = operatorId;
@@ -351,8 +396,13 @@ int main(int argc, char **argv) {
          printf("{\\tt %s}", token);
       } else {
          printf("%s", token);
-         fprintf(stderr, "%s\n", token);
       } 
+   }
+   printf("\\section*{Index}\n");
+   for (i=0; i<nids; ++i) {
+      strcpy(token, identifiers[i]);
+      texformat(strlen(token));
+      printf("~%s\\\\\n", token);
    }
    printf("\\end{document}\n");
    return 0;

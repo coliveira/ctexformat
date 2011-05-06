@@ -7,9 +7,6 @@
 #include <string.h>
 #include <stdlib.h>
 
-#define MAX_TOKEN_SIZE 2047
-char token[MAX_TOKEN_SIZE+1];
-char tokencp[MAX_TOKEN_SIZE+1];
 
 #define ASIZE(a_) sizeof(a_)/sizeof(a_[0])
 #define FATAL(s_) fatal(s_, __FILE__, __LINE__)
@@ -45,15 +42,19 @@ char *keywords[] = {
    0,
 };
 
+#define MAX_TOKEN_SIZE 2048  /* large because also include strings */
+char token[MAX_TOKEN_SIZE+1];    /* the last token read */
+char tokencp[MAX_TOKEN_SIZE+1];  /* a copy of the token */
+
 #define MAX_ID_SIZE 63
 #define MAX_NUM_IDS 1024
 
 char identifiers[MAX_NUM_IDS][MAX_ID_SIZE+1];
-int firstviewed[MAX_NUM_IDS];
-int idpos[MAX_NUM_IDS];
+int firstviewed[MAX_NUM_IDS];  /* line an id was first read */
+int idpos[MAX_NUM_IDS];        /* sorted position of an id */
 
-int nids = 0;
-int curline = 0;
+int nids = 0;     /* number of stored ids */
+int curline = 0;  /* current line number */
 
 int isidpresent(const char *id, int add)
 {

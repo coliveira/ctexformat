@@ -1,6 +1,6 @@
 /*
  * ctexformat: reads a C file and print it formatted as LaTeX input.
- * 2011 (c) Carlos A.S. Oliveira 
+ * 2011 (c) Carlos A.S. Oliveira  http://coliveira.net 
  * - released under the GPL license.
  */
 #include <stdio.h>

@@ -146,7 +146,7 @@ void texformat(int maxpos)
          strcpy(token + pos -1, "{\\tt\\~{}}");
          pos += tlen - 2;
       }
-      if (c == '<' || c == '>') {
+      if (c == '+' || c == '-' || c == '<' || c == '>') {
          if (pos + 3 > MAX_TOKEN_SIZE) FATAL("error: token is too long");
          token[pos-1] = '$';
          token[pos  ] = c;
@@ -245,20 +245,27 @@ int readcomment(FILE *f)
       }
       printf("}");
    } else if (c == '*') {
-      /* There is a problem with alignment of first commented
+      /* There was a problem with alignment of first commented
        * line with the next. The reason is that before the comment,
        * blank characters "~" have the width of normal text. In the
-       * comment, they have the width of \tt text. */
+       * comment, they have the width of \tt text. This is solved
+       * by checking if there is a nonblank character. */
       printf("{\\tt/*");
+      int nonblank = 1;
       while ((c = fgetc(f)) != EOF) {
          if (c == '*') {
             c = fgetc(f);
             if (c == '/') break;  /* end of comment */
             else { ungetc(c, f); c = '*'; }
          }
-         if ((blanktype = isblank(c)) == 2) printf("\\\\\n\\rule{0cm}{0cm}");
+         if ((blanktype = isblank(c)) == 2) {
+            printf("}\\\\\n\\rule{0cm}{0cm}"); curline++; nonblank = 0;
+         } 
          else if (blanktype) printf("~");
-         else { token[0] = c; texformat(1); printf("%s", token); }
+         else {
+            if (!nonblank) { printf("{\\tt "); nonblank=1; }
+            token[0] = c; texformat(1); printf("%s", token);
+         }
       }
       printf("*/}"); c = fgetc(f);
    } else {
@@ -405,7 +412,7 @@ int main(int argc, char **argv)
    for (i=0; i<nids; ++i) {
       strcpy(token, identifiers[i]);
       texformat(strlen(token));
-      printf("~%s, line %d\\\\\n", token, firstviewed[i]);
+      printf("%s, line %d\\\\\n", token, firstviewed[i]);
    }
    printf("\\end{document}\n");
    return 0;

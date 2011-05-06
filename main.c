@@ -7,11 +7,8 @@
 #include <string.h>
 #include <stdlib.h>
 
-
 #define ASIZE(a_) sizeof(a_)/sizeof(a_[0])
 #define FATAL(s_) fatal(s_, __FILE__, __LINE__)
-
-void fatal(const char *emsg, const char *file, int line);
 
 enum TokenType {
    IS_ERROR,
@@ -42,7 +39,7 @@ char *keywords[] = {
    0,
 };
 
-#define MAX_TOKEN_SIZE 2048  /* large because also include strings */
+#define MAX_TOKEN_SIZE 2047  /* large because also includes strings */
 char token[MAX_TOKEN_SIZE+1];    /* the last token read */
 char tokencp[MAX_TOKEN_SIZE+1];  /* a copy of the token */
 
@@ -55,6 +52,13 @@ int idpos[MAX_NUM_IDS];        /* sorted position of an id */
 
 int nids = 0;     /* number of stored ids */
 int curline = 0;  /* current line number */
+int operatorId;   /* number of operator in operators array */
+
+void fatal(const char *emsg, const char *file, int line)
+{
+   printf("%s at %s:%d\n", emsg, file, line);
+   exit(1);
+}
 
 int isidpresent(const char *id, int add)
 {
@@ -67,18 +71,10 @@ int isidpresent(const char *id, int add)
    if (nids >= MAX_NUM_IDS)
       FATAL("error: no space for new ids");
    if (strlen(id)> MAX_ID_SIZE)
-      FATAL("errr: ID is too long");
+      FATAL("error: identifier is too long");
    firstviewed[nids] = curline;
    strcpy(identifiers[nids++], id);
    return 1;
-}
-
-static int operatorId = 0;
-
-void fatal(const char *emsg, const char *file, int line)
-{
-   printf("%s at %s:%d\n", emsg, file, line);
-   exit(1);
 }
 
 /* return 1 for blank, 2 for newlines */
@@ -110,15 +106,12 @@ int isidchar(char c, int afterfirst)
    return normalchar || (afterfirst && (('0' <= c && c <= '9') || c=='.'));
 }
 
-
-void texformat(int maxpos)
+void texformat(int n)
 {
-   int c, i, n, pos;
+   int c, i, pos=0;
 
-   for (i=0; i<maxpos; ++i) tokencp[i] = token[i]; // make a copy of what we have
+   for (i=0; i<n; ++i) tokencp[i] = token[i]; // make a copy of what we have
 
-   n = maxpos;
-   pos = 0;
    for (i=0; i<n && pos < MAX_TOKEN_SIZE; ++i) {
       c = tokencp[i];
       token[pos++] = c;
@@ -300,13 +293,12 @@ int nexttoken(FILE *f)
    char **kws;
 
    c = processblanks(f);
-   if (c == EOF) return IS_NOTHING;
-
    if (c == '/') {
       c = readcomment(f);
       ungetc(c, f);
       c = processblanks(f);
    }
+   if (c == EOF) return IS_NOTHING;
    if (c == '"') {
       return readstringlit(f);
    } 
@@ -348,9 +340,8 @@ int nexttoken(FILE *f)
    if (isblank(c)) 
       ungetc(c, f); /* lets deal with this the next time */
 
-   if (pos == 1 && isoperator()) 
-      return IS_OPERATOR; /* maybe returned before testing...*/
-
+   if (pos == 1) /* didn't get a chance to test */
+      if (isoperator()) return IS_OPERATOR; 
 
    if (ret) {
       texformat(pos);

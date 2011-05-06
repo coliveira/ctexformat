@@ -1,4 +1,8 @@
-/* read a file and print tokens on it */
+/*
+ * ctexformat: reads a C file and print it formatted as LaTeX input.
+ * 2011 (c) Carlos A.S. Oliveira 
+ * - released under the GPL license.
+ */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -46,6 +50,7 @@ char *keywords[] = {
 
 char identifiers[MAX_NUM_IDS][MAX_ID_SIZE+1];
 int firstviewed[MAX_NUM_IDS];
+int idpos[MAX_NUM_IDS];
 
 int nids = 0;
 int curline = 0;
@@ -267,6 +272,7 @@ int readcomment(FILE *f)
             token[0] = c; texformat(1); printf("%s", token);
          }
       }
+      if (!nonblank) { printf("{\\tt"); }
       printf("*/}"); c = fgetc(f);
    } else {
       ungetc(c, f); c = '/';
@@ -364,6 +370,20 @@ int nexttoken(FILE *f)
    return IS_ID;
 }
 
+int cmpfunc(const void *pa, const void *pb)
+{
+   int a = *((int*)pa);
+   int b = *((int*)pb);
+   return strcasecmp(identifiers[a], identifiers[b]);
+}
+
+void sortids()
+{
+   int i;
+   for (i=0; i<nids; ++i) idpos[i] = i;
+   qsort(idpos, nids, sizeof(idpos[0]), cmpfunc);
+}
+
 int main(int argc, char **argv) 
 {
    int i;
@@ -409,10 +429,11 @@ int main(int argc, char **argv)
       } 
    }
    printf("\\section*{Index}\n");
+   sortids();
    for (i=0; i<nids; ++i) {
-      strcpy(token, identifiers[i]);
+      strcpy(token, identifiers[idpos[i]]);
       texformat(strlen(token));
-      printf("%s, line %d\\\\\n", token, firstviewed[i]);
+      printf("%s, line %d\\\\\n", token, firstviewed[idpos[i]]);
    }
    printf("\\end{document}\n");
    return 0;
